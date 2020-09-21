@@ -4,6 +4,7 @@ import {GameSettings} from "./GameSettings";
 import {Game} from "./Game";
 import {GameControlPanel} from "./GameControlPanel";
 import {makeStyles} from "@material-ui/core/styles";
+import {GAMES} from "../constants";
 
 const useStyles = makeStyles(theme => ({
     root: {
@@ -39,7 +40,7 @@ export function GameBoard() {
                           level={level}
                           onLevelChange={setLevel}
                           levels={3}
-                          games={[{id: 0, label: 'Scale Writer'}]}
+                          games={GAMES}
                           gameId={gameId}
                           onGameChange={setGameId}/>
             <Game gameId={gameId}

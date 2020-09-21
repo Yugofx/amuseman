@@ -1,6 +1,7 @@
 import React from 'react';
 import {ScaleWriter} from "./ScaleWriter";
 import {makeStyles} from "@material-ui/core/styles";
+import {Recorder} from "./Recorder";
 
 const useStyles = makeStyles(theme => ({
     board: {
@@ -24,6 +25,7 @@ export function Game({ gameId, isStarted, isSubmitted }) {
         case 0: return (<ScaleWriter className={board}
                                      isStarted={isStarted}
                                      isSubmitted={isSubmitted} />)
+        case 1: return (<Recorder className={board} />)
         default: return (<div className={emptyBoard}>Game is not selected</div>);
     }
 }
