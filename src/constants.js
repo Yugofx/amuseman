@@ -68,8 +68,3 @@ export const ROMAN_NUMBER = [
     'Ⅵ',
     'Ⅶ',
 ];
-
-export const GAMES = [
-    { id: 0, label: 'Scale Writer' },
-    { id: 1, label: 'Recorder' },
-];

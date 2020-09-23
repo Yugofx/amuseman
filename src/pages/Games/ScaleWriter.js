@@ -1,11 +1,11 @@
 import React, {useEffect, useState} from 'react';
-import {KEYS, MODE_NAMES, MODES, ROMAN_NUMBER} from "../constants";
-import {checkCorrectScale, isCorrectKey} from "../utils/scale-writer.utils";
+import {KEYS, MODE_NAMES, MODES, ROMAN_NUMBER} from "../../constants";
+import {checkCorrectScale, isCorrectKey} from "../../utils/scaleWriterUtils";
 import Select from "@material-ui/core/Select";
 import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
-import randomNumber from "../utils/randomNumber";
+import randomNumber from "../../utils/randomNumber";
 import TextField from "@material-ui/core/TextField";
 import {makeStyles} from "@material-ui/core/styles";
 
@@ -98,11 +98,11 @@ export function ScaleWriter(props) {
         setValue(a => a.map((val, i) => i === index ? v : val));
     }
 
-    const keyList = KEYS.map(key => <MenuItem key={key} value={key}>{key}</MenuItem>);
+    const keyList = KEYS.map(k => <MenuItem key={k} value={k}>{k}</MenuItem>);
     const modeList = MODES.map(m => <MenuItem key={m} value={m}>{MODE_NAMES[m]}</MenuItem>)
 
     const boxes = value.map((v, i) =>
-        <div className={classes.box} key={i} style={{display: i === value.length - 1 ? 'none' : ''}}>
+        <div className={classes.box} key={v + i} style={{display: i === value.length - 1 ? 'none' : ''}}>
             <TextField
                 label={ROMAN_NUMBER[i]}
                 error={!v}
