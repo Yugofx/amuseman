@@ -1,51 +1,10 @@
-import React, { useContext, useEffect, useState } from 'react';
-import {makeStyles} from "@material-ui/core/styles";
-import MicIcon from '@material-ui/icons/Mic';
-import { AudioDataContext } from '../../common/AudioProvider';
-import Button from '@material-ui/core/Button';
+import React, { useEffect, useReducer } from 'react';
 import { Box } from '@material-ui/core';
-
-function usePitch(isStarted) {
-    const { canUse, stream } = useContext(AudioDataContext);
-    const [recorder, setRecorder] = useState(null);
-    const [audioCtx] = useState(new AudioContext());
-    const [pitch, setPitch] = useState(null);
-    const [processor, setProcessor] = useState(null);
-
-    useEffect(() => {
-        if (!processor) {
-            setProcessor(new Worker('../PitchProcessorWorker.js'));
-        } else {
-            processor.onmessage = ({ data }) => setPitch(data);
-        }
-    }, [processor]);
-
-    useEffect(() => {
-        setRecorder(canUse ? new MediaRecorder(stream) : null);
-    }, [canUse, stream]);
-
-    useEffect(() => {
-        if (recorder && isStarted) {
-            recorder.ondataavailable = async function({ data }) {
-                if (data.size !== 0) {
-                    const response = await fetch(URL.createObjectURL(data));
-                    const arrayBuffer = await response.arrayBuffer();
-                    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-                    const audioData = audioBuffer.getChannelData(0);
-                    processor.postMessage({
-                        sampleRate: audioBuffer.sampleRate,
-                        audioData
-                    });
-                }
-            };
-            recorder.state === 'inactive' && recorder.start();
-        } else if (recorder && !isStarted) {
-            recorder.state === 'recording' && recorder.stop();
-        }
-    });
-
-    return pitch;
-}
+import Button from '@material-ui/core/Button';
+import MicIcon from '@material-ui/icons/Mic';
+import { makeStyles } from '@material-ui/core/styles';
+import { KEYS} from '../../constants';
+import { frequencer } from '../../libs/frequencer';
 
 const useStyles = makeStyles(theme => ({
     root: {
@@ -84,37 +43,88 @@ const useStyles = makeStyles(theme => ({
     }
 }));
 
+const initialState = {
+    source: null,
+    analyser: null,
+    frequency: null,
+    key: null,
+    octave: null,
+    frequencer: frequencer(),
+    isStarted: false,
+    frameId: null,
+};
+
+const reducer = (state, action) => {
+    switch (action.type) {
+        case 'setStarted':
+            return { ...state, isStarted: action.isStarted };
+        case 'measure':
+            const c0 = 440.0 * Math.pow(2.0, -4.75);
+            const halfStepsBelowMiddleC = Math.round(12.0 * Math.log2(action.frequency / c0));
+            return {
+                ...state,
+                frequency: action.frequency,
+                frameId: action.frameId,
+                octave: Math.floor(halfStepsBelowMiddleC / 12.0),
+                key: KEYS[Math.floor(halfStepsBelowMiddleC % 12)]
+            };
+        case 'clearFrameId':
+            cancelAnimationFrame(state.frameId);
+            return { ...state, frameId: null };
+        default: return state;
+    }
+};
+
 export function Pitcher() {
     const classes = useStyles();
-    const [isStarted, setStarted] = useState(false);
-    const pitch = usePitch(isStarted);
+    const [state, dispatch] = useReducer(reducer, initialState);
 
-    function start() {
-        setStarted(true);
+    function runFrequencyDetection() {
+        state.frequencer().then(frequency => {
+            dispatch({
+                type: 'measure',
+                frameId: requestAnimationFrame(runFrequencyDetection),
+                frequency
+            });
+        })
     }
 
-    // min 3 sec for correct detection
     useEffect(() => {
-        isStarted && setTimeout(() => setStarted(false), 3000);
-    }, [isStarted]);
+        if (state.isStarted) {
+            runFrequencyDetection();
+        } else {
+            dispatch({ type: 'clearFrameId' });
+        }
+    }, [state.isStarted]);
+
+    // Cleanup
+    useEffect(() => () => {
+        dispatch({ type: 'setStarted', isStarted: false });
+    }, []);
+
+    function toggle() {
+        dispatch({ type: 'setStarted', isStarted: !state.isStarted });
+    }
 
     return (
         <Box className={classes.root}>
             <Box className={classes.board}>
                 <Box className={classes.label}>Pitcher</Box>
 
-                <Button disabled={isStarted}
-                        className={classes.icon}
-                        onClick={start}>
+                <Button className={classes.icon}
+                        onClick={toggle}>
                     <MicIcon />
                 </Button>
 
-                { pitch
-                    ? <Box>
-                        <Box><strong>pitch: { pitch.key.toUpperCase() + pitch.octave }</strong></Box>
-                        <Box><strong>freq: { pitch.frequency }</strong></Box>
-                    </Box>
-                    : null }
+                <Box>{
+                    state.frequency !== null
+                        ? <Box>
+                            <strong>freq: { state.frequency }</strong>
+                            <strong>note: { state.key + state.octave }</strong>
+                        </Box>
+                        : 'Not defined'
+                }
+                </Box>
             </Box>
         </Box>
     );

@@ -1,27 +1,17 @@
 export async function requestAudioData(cb, deviceId) {
-    let stream = null;
     try {
         const status = await navigator.permissions.query({ name: 'microphone' });
         status.onchange = async function () {
             if (status.state === 'granted') {
-                if (stream) { return; }
-                stream = await getStream(deviceId);
-                cb(true, stream);
+                cb(await getStream(deviceId));
             } else if (status.state === 'denied') {
-                stream = null;
-                cb(false, null);
-            } else if (status.state === 'prompt') {
-                stream = null;
-                stream = await getStream(deviceId);
-                cb(true, stream);
+                cb(null);
             }
         };
-        stream = await getStream(deviceId)
-        cb(status.state === 'granted', stream);
+        cb(await getStream(deviceId));
     } catch (e) {
         console.error('[ERROR] Can\'t Get Audio Stream');
-        stream = null;
-        cb(false, null);
+        cb(null);
     }
 }
 

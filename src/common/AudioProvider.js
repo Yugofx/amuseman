@@ -1,41 +1,45 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useReducer } from 'react';
 import { requestAudioData, requestAudioInputs } from '../utils/requestAudioData';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import { Box } from '@material-ui/core';
 
-export const AudioDataContext = React.createContext({});
+export const AudioStateContext = React.createContext({});
+export const AudioDeviceDispatchContext = React.createContext({});
+
+const initialState = {
+    canUseAudioInput: false,
+    stream: null,
+    audioCtx: new AudioContext(),
+    deviceId: '',
+    devices: null
+};
+
+const reducer = (state, action) => {
+    switch (action.type) {
+        case 'resetDeviceId': return { ...state, deviceId: '' };
+        case 'setDeviceId': return { ...state, deviceId: action.deviceId };
+        case 'setStream': return { ...state, stream: action.stream, canUseAudioInput: !!action.stream };
+        case 'setDevices': return { ...state, devices: action.devices };
+        default: return state;
+    }
+};
 
 export function AudioProvider(props) {
-    const [state, setAudioState] = useState({ canUse: false, stream: null });
-    const [deviceId, setDeviceId] = useState('');
-    const [devices, setDevices] = useState(null);
+    const [state, dispatch] = useReducer(reducer, initialState);
 
-    function updateAudioDevices() {
-        requestAudioInputs(ds => setDevices(ds.map(device =>
-            <MenuItem key={device.deviceId} value={device.deviceId}>{device.label}</MenuItem>)));
+    function updateDeviceId(deviceId = '') {
+        dispatch({ type: 'setDeviceId', deviceId });
     }
 
     useEffect(() => {
-        requestAudioData((canUse, stream) => {
-            setAudioState({ canUse, stream });
-            if (canUse) { updateAudioDevices(); }
-            else { setDeviceId('') }
-        }, deviceId);
-    }, [deviceId]);
+        requestAudioData((stream) => {
+            dispatch({ type: 'setStream', stream });
+            if (stream) { requestAudioInputs(devices => { dispatch({ type: 'setDevices', devices }) }); }
+            else { dispatch({ type: 'resetDeviceId' }); }
+        }, state.deviceId);
+    }, [state.deviceId]);
 
-    return <AudioDataContext.Provider value={state}>
-        {
-            state.canUse
-            ? (<Select  value={deviceId}
-                        onChange={e => setDeviceId(e.target.value)}
-                        displayEmpty>
-                    <MenuItem value="">Audio input not chosen</MenuItem>
-                    {devices || []}
-                </Select>)
-            : <Box>No access to audio input</Box>
-        }
-
-        { props.children }
-    </AudioDataContext.Provider>
+    return <AudioStateContext.Provider value={state}>
+        <AudioDeviceDispatchContext.Provider value={updateDeviceId}>
+            { props.children }
+        </AudioDeviceDispatchContext.Provider>
+    </AudioStateContext.Provider>
 }

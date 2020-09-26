@@ -21,9 +21,7 @@ function App() {
                     <Switch>
                         <Route path="/" exact={true}><Home/></Route>
                         <Route path="/games">
-                            <AudioProvider>
-                                <Games/>
-                            </AudioProvider>
+                            <Games/>
                         </Route>
                     </Switch>
                 </Container>
